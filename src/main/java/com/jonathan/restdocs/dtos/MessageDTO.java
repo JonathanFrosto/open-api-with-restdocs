@@ -11,4 +11,9 @@ public class MessageDTO {
     public void setMessage(String message) {
         this.message = message;
     }
+
+    public MessageDTO message(String message) {
+        this.message = message;
+        return this;
+    }
 }

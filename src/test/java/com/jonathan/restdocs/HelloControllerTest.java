@@ -1,20 +1,24 @@
 package com.jonathan.restdocs;
 
-import com.epages.restdocs.apispec.ResourceDocumentation;
 import com.epages.restdocs.apispec.ResourceSnippetParameters;
-import com.epages.restdocs.apispec.ResourceSnippetParametersBuilder;
+import com.epages.restdocs.apispec.Schema;
 import com.jonathan.restdocs.controllers.HelloController;
+import com.jonathan.restdocs.dtos.MessageDTO;
+import com.jonathan.restdocs.services.HelloService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.restdocs.AutoConfigureRestDocs;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.restdocs.snippet.Snippet;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static com.epages.restdocs.apispec.ResourceDocumentation.parameterWithName;
+import static com.epages.restdocs.apispec.ResourceDocumentation.resource;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document;
-import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
-import static org.springframework.restdocs.payload.PayloadDocumentation.responseFields;
 import static org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get;
+import static org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(HelloController.class)
@@ -24,24 +28,44 @@ class HelloControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockBean
+    private HelloService helloService;
+
     @Test
-    void ola() throws Exception {
-        mockMvc.perform(get("/ola"))
-                .andDo(document("Hello",
-                        responseFields(fieldWithPath("message").description("Mensagem para o usuário"))))
+    void getHelloMessage() throws Exception {
+
+        MessageDTO responseBody = new MessageDTO().message("First message");
+        when(helloService.getMessage(any())).thenReturn(responseBody);
+
+        mockMvc.perform(get("/hello/{messageId}", 1))
+                .andDo(document("Hello message", resource(
+                        ResourceSnippetParameters.builder()
+                                .summary("Return greeting message to client")
+                                .pathParameters(
+                                        parameterWithName("messageId").description("Output message id")
+                                )
+                                .responseFields(
+                                        fieldWithPath("message").description("Output message")
+                                )
+                                .responseSchema(
+                                        Schema.schema("MessageWrapper")
+                                )
+                                .build()
+                )))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void ola2() throws Exception {
-        mockMvc.perform(get("/ola"))
-                .andDo(document("Hello", ResourceDocumentation.resource(
+    void notFoundMessage() throws Exception {
+
+        mockMvc.perform(get("/hello/{messageId}", 1))
+                .andDo(document("Not found hello message", resource(
                         ResourceSnippetParameters.builder()
-                                        .responseFields(
-                                                fieldWithPath("message").description("Mensagem para o usuário")
-                                        )
-                        .build()
+                                .pathParameters(
+                                        parameterWithName("messageId").description("Output message id")
+                                )
+                                .build()
                 )))
-                .andExpect(status().isOk());
+                .andExpect(status().isNotFound());
     }
 }
